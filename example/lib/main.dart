@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -31,13 +33,20 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   GlobalKey _globalKey = GlobalKey();
+  StreamController<String> localImage;
 
   @override
   void initState() {
     super.initState();
 
     _requestPermission();
+    localImage = StreamController();
+  }
 
+  @override
+  void dispose() {
+    localImage.close();
+    super.dispose();
   }
 
   @override
@@ -46,9 +55,10 @@ class _MyHomePageState extends State<MyHomePage> {
         appBar: AppBar(
           title: Text("Save image to gallery"),
         ),
-        body: Center(
+        body: SingleChildScrollView(
           child: Column(
             children: <Widget>[
+              Text("source"),
               RepaintBoundary(
                 key: _globalKey,
                 child: Container(
@@ -56,6 +66,19 @@ class _MyHomePageState extends State<MyHomePage> {
                   height: 200,
                   color: Colors.red,
                 ),
+              ),
+              Text("result"),
+              StreamBuilder<String>(
+                stream: localImage.stream,
+                builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
+                  print('xietianrui stream builder build $snapshot');
+                  if (snapshot.data == null) {
+                    return Text("empty");
+                  }
+                  File file = File.fromUri(Uri.parse(snapshot.data));
+                  print('xietianrui file exist ${file.existsSync()}');
+                  return Image.file(file, width: 200, height: 200);
+                },
               ),
               Container(
                 padding: EdgeInsets.only(top: 15),
@@ -109,33 +132,30 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _saveScreen() async {
-    RenderRepaintBoundary boundary =
-        _globalKey.currentContext.findRenderObject();
+    RenderRepaintBoundary boundary = _globalKey.currentContext.findRenderObject();
     ui.Image image = await boundary.toImage();
     ByteData byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    final result =
-        await ImageGallerySaver.saveImage(byteData.buffer.asUint8List());
-    print(result);
+    final result = await ImageGallerySaver.saveImage(byteData.buffer.asUint8List(), isReturnImagePathOfIOS: true);
+    print('xietianrui saveImage $result');
     _toastInfo(result.toString());
+    localImage.add(result["filePath"]);
   }
 
   _getHttp() async {
     var response = await Dio().get(
         "https://ss0.baidu.com/94o3dSag_xI4khGko9WTAnF6hhy/image/h%3D300/sign=a62e824376d98d1069d40a31113eb807/838ba61ea8d3fd1fc9c7b6853a4e251f94ca5f46.jpg",
         options: Options(responseType: ResponseType.bytes));
-    final result = await ImageGallerySaver.saveImage(
-        Uint8List.fromList(response.data),
-        quality: 60,
-        name: "hello");
+    final result = await ImageGallerySaver.saveImage(Uint8List.fromList(response.data),
+        quality: 60, name: "hello", isReturnImagePathOfIOS: true);
     print(result);
     _toastInfo("$result");
+    localImage.add(result["filePath"]);
   }
 
   _saveGif() async {
     var appDocDir = await getTemporaryDirectory();
     String savePath = appDocDir.path + "/temp.gif";
-    String fileUrl =
-        "https://hyjdoc.oss-cn-beijing.aliyuncs.com/hyj-doc-flutter-demo-run.gif";
+    String fileUrl = "https://hyjdoc.oss-cn-beijing.aliyuncs.com/hyj-doc-flutter-demo-run.gif";
     await Dio().download(fileUrl, savePath);
     final result = await ImageGallerySaver.saveFile(savePath);
     print(result);
@@ -145,8 +165,7 @@ class _MyHomePageState extends State<MyHomePage> {
   _saveVideo() async {
     var appDocDir = await getTemporaryDirectory();
     String savePath = appDocDir.path + "/temp.mp4";
-    String fileUrl =
-        "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    String fileUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
     await Dio().download(fileUrl, savePath, onReceiveProgress: (count, total) {
       print((count / total * 100).toStringAsFixed(0) + "%");
     });
