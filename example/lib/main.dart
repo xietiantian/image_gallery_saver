@@ -121,12 +121,12 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
   }
 
-  _requestPermission() async {
+  _requestPermission([Permission permission = Permission.storage]) async {
     Map<Permission, PermissionStatus> statuses = await [
-      Permission.storage,
+      permission,
     ].request();
 
-    final info = statuses[Permission.storage].toString();
+    final info = statuses[permission].toString();
     print(info);
     _toastInfo(info);
   }
@@ -138,7 +138,12 @@ class _MyHomePageState extends State<MyHomePage> {
     final result = await ImageGallerySaver.saveImage(byteData.buffer.asUint8List(), isReturnImagePathOfIOS: true);
     print('xietianrui saveImage $result');
     _toastInfo(result.toString());
-    localImage.add(result["filePath"]);
+    final path = result["filePath"];
+    File file = File.fromUri(Uri.parse(path));
+    if (!file.existsSync()) {
+      await ImageGallerySaver.requestPhotoPermission();
+    }
+    localImage.add(path);
   }
 
   _getHttp() async {

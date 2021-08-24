@@ -36,4 +36,13 @@ class ImageGallerySaver {
     });
     return result;
   }
+
+  /// request permission
+  /// return Map type
+  /// isSuccess - granted
+  /// for example:{"isSuccess":true}
+  static Future requestPhotoPermission() async {
+    final result = await _channel.invokeMethod('requestPhotoPermission');
+    return result;
+  }
 }

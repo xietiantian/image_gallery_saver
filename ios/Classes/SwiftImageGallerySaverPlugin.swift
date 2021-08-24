@@ -36,6 +36,8 @@ public class SwiftImageGallerySaverPlugin: NSObject, FlutterPlugin {
                 saveVideo(path, isReturnImagePath: isReturnFilePath)
             }
         }
+      } else if (call.method == "requestPhotoPermission") {
+        requestPhotoPermission();
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -142,6 +144,16 @@ public class SwiftImageGallerySaverPlugin: NSObject, FlutterPlugin {
                 }
             }
         })
+    }
+    
+    func requestPhotoPermission() {
+        if #available(iOS 12.0, *){
+            
+        } else {
+            PHPhotoLibrary.requestAuthorization { (status) in
+                self.saveResult(isSuccess: status == PHAuthorizationStatus.authorized)
+            }
+        }
     }
     
     /// finish saving，if has error，parameters error will not nill
